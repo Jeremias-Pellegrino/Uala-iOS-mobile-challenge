@@ -9,7 +9,7 @@ import SwiftUI
 
 struct City: Codable {
     
-    static let dummy: City = City(coord: Coord(lon: 0, lat: 0), country: "Country", _id: 999, name: "city name")
+    static let dummy: City = City(coord: Coord(lon: 0, lat: 0), country: "Country", _id: 999, name: "City name")
     
     let coord: Coord
     let country: String

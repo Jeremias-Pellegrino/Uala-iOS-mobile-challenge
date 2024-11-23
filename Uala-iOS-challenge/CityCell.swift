@@ -21,8 +21,7 @@ struct FontModifier: ViewModifier {
 }
 
 struct CityCell: View {
-    
-    //@ObservedObject
+
     let country: String
     let lat: String
     let lon: String
