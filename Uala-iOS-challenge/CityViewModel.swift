@@ -12,7 +12,6 @@ class CityViewModel: ObservableObject {
     var repository: Repository = Repository()
     @State private var trie = ObservableTrie()
     
-    private var allCities: [String: City] = [:]
     private var initialCities: [City] = []
     
     @Published var favorites: [City] = []
@@ -26,26 +25,26 @@ class CityViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     
-    func setupCities() {
-        
-    }
-    
     init() {
         Task {
-            try await fetch()
-            setupCities()
+            try await fetchDataAndFeedTrie()
+            await MainActor.run {
+                self.loading.toggle()
+            }
         }
         
         trie.$searchResults
-            .sink { [weak self] cityNames in
-                self?.filterCities(matching: cityNames)
+            .sink { [weak self] cities in
+                var res = cities.sorted { $0.name < $1.name }
+                res = Array(res.prefix(self!.batchSize))
+                self?.searchResults = res
             }
             .store(in: &cancellables)
         
         $searchText
             .sink { word in
-                if word == "" {
-                    self.searchResults = self.initialCities
+                if word.isEmpty {
+                    self.searchResults = Array(self.initialCities.prefix(self.batchSize))
                     return
                 }
                 self.trie.searchWithPrefix(word)
@@ -53,42 +52,26 @@ class CityViewModel: ObservableObject {
             .store(in: &cancellables)
     }
     
-    private func filterCities(matching cityNames: [String]) {
-        var res = [City]()
-        for name in cityNames {
-            res.append(allCities[name]!)
-        }
-        res = res.sorted { $0.name < $1.name }
-        res = Array(res.prefix(batchSize))
-        searchResults = res
-    }
-    
-    func fetch() async throws {
+    func fetchDataAndFeedTrie() async throws {
         let data = try await repository.apiClient.requestData(with: repository.url)
-        DispatchQueue(label: "dwnld", qos: .userInitiated).async {
+        
+        //user initiated queue to make sure
+        DispatchQueue(label: "dwnld", qos: .userInitiated).async { [weak self] in
             do {
-                var cities: [City] = []
-                cities = try Parser().parse(data: data, to: [City].self)
-                print(cities)
-                for city in cities {
-                    self.allCities[city.name] = city
-                    self.trie.insert(city.name)
-                }
+                var cities = try Parser().parse(data: data, to: [City].self)
+                    .sorted { $0.name < $1.name }
                 
-                Task {
-                    await MainActor.run {
-                        self.loading.toggle()
-                        print("done")
+                //initial sort
+                for city in cities {
+                    if city.name.hasPrefix("A") {
+                        self?.initialCities.append(city)
                     }
+                    self?.trie.insert(city)
                 }
             } catch {
                 //Display an alert
                 print(error)
             }
         }
-    }
-    
-    func checkForFavorites() {
-        
     }
 }
