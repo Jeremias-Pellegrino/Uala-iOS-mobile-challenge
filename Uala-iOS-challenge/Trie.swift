@@ -7,6 +7,103 @@
 
 import SwiftUI
 
+class ObservableTrie2: ObservableObject {
+    class TrieNode {
+        var char: Character = "\0"
+        var city: City = City.dummy
+        var children: [Character: TrieNode] = [:]
+        var isEndOfWord = false
+    }
+    
+    private let root: TrieNode
+    private var nodesHistory: [TrieNode]
+    
+    @Published var searchResults: [[City]] = [[]]
+    
+    func insert(_ cities: [City]) {
+        cities.forEach { city in
+            self.insert(city)
+        }
+    }
+    
+    init(items: [City] = []) {
+        root = TrieNode()
+        nodesHistory = [root]
+        printChildren(root)
+    }
+    
+    func printChildren(_ node: TrieNode) {
+//        print(node.char)
+        for child in node.children.values {
+            printChildren(child)
+        }
+    }
+    
+    // Insert a word into the Trie
+    func insert(_ city: City) {
+        var currentNode = root
+        for char in city.name {
+            if currentNode.children[char] == nil {
+                let newNode = TrieNode()
+                newNode.char = char
+                newNode.city = city
+                currentNode.children[char] = newNode
+            }
+            currentNode = currentNode.children[char]!
+        }
+        currentNode.isEndOfWord = true
+    }
+    
+    // Search for words with a prefix
+    func searchWithPrefix(_ prefix: String) {
+        
+        //optimizar despues? es para ejecutar el analisis desde el nodo anterior en vez de comenzar desde el root de nuevo.
+        //        guard let currentNode = nodesHistory.last else {
+        //            searchResults = [[]]
+        //            return
+        //        }
+        //
+        //        for char in prefix {
+        //            guard let nextNode = currentNode.children[char] else {
+        //                searchResults = [[]]
+        //                return
+        //            }
+        //            currentNode = nextNode
+        //                }
+        
+        var currentNode = root
+        for char in prefix {
+            guard let nextNode = currentNode.children[char] else {
+                searchResults = [[]]
+                return
+            }
+            currentNode = nextNode
+        }
+        
+        let result = collectWords(from: currentNode, prefix: prefix)
+        searchResults = paginate(array: result, itemsPerPage: 30)
+    }
+    
+    private func collectWords(from node: TrieNode, prefix: String) -> [City] {
+        var cities = [City]()
+        if node.isEndOfWord {
+            cities.append(node.city)
+        }
+        
+        for (char, childNode) in node.children {
+            cities += collectWords(from: childNode, prefix: prefix + String(char))
+        }
+        
+        return cities
+    }
+    
+    func paginate<T>(array: [T], itemsPerPage: Int) -> [[T]] {
+        return stride(from: 0, to: array.count, by: itemsPerPage).map {
+            Array(array[$0..<min($0 + itemsPerPage, array.count)])
+        }
+    }
+}
+
 class ObservableTrie: ObservableObject {
     class TrieNode {
         var char: Character = "\0"
@@ -17,26 +114,32 @@ class ObservableTrie: ObservableObject {
     private let root: TrieNode
     private var nodesHistory: [TrieNode]
     
-    @Published var searchResults: [[String]] = [[]]
+//    @Published var searchResults: [[String]] = [[]]
+    @Published var searchResults: [String] = []
+
+    func insert(_ words: [String]) {
+        words.forEach { word in
+            self.insert(word)
+        }
+    }
     
     init(items: [String] = [""]) {
         root = TrieNode()
         nodesHistory = [root]
         
-        //        items.forEach { word in
-        //            self.insert(word)
-        //        }
-                for i in 0..<100 {
-                    self.insert("Apple\(i)")
-        //            self.insert("App\(i)")
-        //            self.insert("Application\(i)")
-        //            self.insert("Banana\(i)")
-                }
-        printChildren(root)
+    
+        
+//        for i in 0..<1000 {
+//            self.insert("Apple\(i)")
+//            //            self.insert("App\(i)")
+//            //            self.insert("Application\(i)")
+//            //            self.insert("Banana\(i)")
+//        }
+//        printChildren(root)
     }
     
     func printChildren(_ node: TrieNode) {
-        print(node.char)
+//        print(node.char)
         for child in node.children.values {
             printChildren(child)
         }
@@ -58,15 +161,34 @@ class ObservableTrie: ObservableObject {
     
     // Search for words with a prefix
     func searchWithPrefix(_ prefix: String) {
+        
+        //optimizar despues? es para ejecutar el analisis desde el nodo anterior en vez de comenzar desde el root de nuevo.
+        //        guard let currentNode = nodesHistory.last else {
+        //            searchResults = [[]]
+        //            return
+        //        }
+        //
+        //        for char in prefix {
+        //            guard let nextNode = currentNode.children[char] else {
+        //                searchResults = [[]]
+        //                return
+        //            }
+        //            currentNode = nextNode
+        //                }
+        
+        var currentNode = root
         for char in prefix {
             guard let nextNode = currentNode.children[char] else {
-                searchResults = [[]]
+//                searchResults = [[]]
+                searchResults = []
                 return
             }
             currentNode = nextNode
         }
+        
         let result = collectWords(from: currentNode, prefix: prefix)
-        searchResults = divideArrayIntoChunks(array: result, chunkSize: 30)
+        searchResults = result
+//        searchResults = paginate(array: result, itemsPerPage: 30)
     }
     
     private func collectWords(from node: TrieNode, prefix: String) -> [String] {
@@ -77,63 +199,13 @@ class ObservableTrie: ObservableObject {
         for (char, childNode) in node.children {
             words += collectWords(from: childNode, prefix: prefix + String(char))
         }
-    
+        
         return words
     }
     
-    func divideArrayIntoChunks<T>(array: [T], chunkSize: Int) -> [[T]] {
-        return stride(from: 0, to: array.count, by: chunkSize).map {
-            Array(array[$0..<min($0 + chunkSize, array.count)])
+    func paginate<T>(array: [T], itemsPerPage: Int) -> [[T]] {
+        return stride(from: 0, to: array.count, by: itemsPerPage).map {
+            Array(array[$0..<min($0 + itemsPerPage, array.count)])
         }
     }
-}
-
-struct ContentView: View {
-    
-    private var debounceTimer: DispatchWorkItem?
-    
-    @StateObject private var trie = ObservableTrie()
-    @State private var searchText = ""
-    @State var pages = 0
-    
-    var body: some View {
-        VStack {
-            TextField("Search...", text: $searchText)
-                //TODO: check for reading the binding $searchText
-                .onChange(of: searchText) { _, newvalue in
-                    let caseInsensitive = newvalue.lowercased()
-                    trie.searchWithPrefix(newvalue)
-                }
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                .padding()
-            
-            List(trie.searchResults[pages],
-                 id: \.self) { word in
-                Text(word)
-            }
-        }
-        .onAppear {
-            print("onappear")
-            
-        }
-    }
-    
-//    mutating func debounce(_ newValue: String) {
-//            // Cancel any existing timer
-//            debounceTimer?.cancel()
-//            
-//            // Set up a new debounce timer
-//            debounceTimer = DispatchWorkItem { [weak self] in
-//                self?.debouncedText = newValue
-//                // Perform your heavy operation here
-//                print("Debounced value: \(newValue)")
-//            }
-//            
-//            // Perform the action after 0.3 seconds of inactivity
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: debounceTimer!)
-//        }
-}
-
-#Preview {
-    ContentView()
 }
