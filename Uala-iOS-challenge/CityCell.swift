@@ -26,6 +26,7 @@ struct CityCell: View {
     let lat: String
     let lon: String
     let name: String
+    @State var isFavorite: Bool = false
     
     init(city: City) {
         self.country = city.country
@@ -44,11 +45,10 @@ struct CityCell: View {
                 Text("\(lat), \(lon)")
             }
             Spacer()
-            Button("Info") {
-                print("TOUCH cell")
-            }.onTapGesture {
-                print("TOUCH BUTTON")
-            }
+            Image(systemName: isFavorite ? "star.fill" : "star")
+                .onTapGesture {
+                    isFavorite.toggle()
+                }
         }.modifier(FontModifier())
     }
 }

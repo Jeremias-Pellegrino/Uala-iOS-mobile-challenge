@@ -9,46 +9,57 @@ import SwiftUI
 
 struct CityListView: View {
     
-    @State private var showSubMenu = false
+    @StateObject var viewModel: CityViewModel = CityViewModel()
+    @State private var scrollID: String? = ""
     
-    @StateObject var viewModel: CityViewModel
-    
-    @State var showFavorites: Bool = false
     
     var body: some View {
-        NavigationView {
-            ZStack {
-                List {
-                    ForEach(viewModel.loadedCities) { city in
-                        CityCell(city: city)
-                            .listRowInsets(EdgeInsets())
+        if viewModel.loading {
+            Text("loading")
+                .padding()
+        }
+        else {
+            NavigationView {
+                VStack {
+                    ScrollView {
+                        LazyVStack {
+                            ForEach(viewModel.searchResults,
+                                    id: \.self) { city in
+                                NavigationLink(destination: MapView()) {
+                                    CityCell(city: city)
+                                }
+                            }
+                        }
+                        .scrollTargetLayout()
+                    }
+                    //                .background(Color.red.opacity(0.2))
+                    //                .contentMargins(.horizontal, 10, for: .scrollContent)
+                    .scrollPosition(id: $scrollID)
+                    .onChange(of: scrollID) { oldValue, newValue in
+                        //pull more values at the bototm
+                        print("scrolled to:", newValue)
                     }
                 }
-                .listStyle(.plain)
-                .background(Color.clear)
-                .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
-                        Text("Search")
+                        TextField("Search...", text: $viewModel.searchText)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding()
                     }
                     ToolbarItem(placement: .topBarTrailing)
                     {
-                        Image(systemName: showFavorites ? "star.fill" : "star")
+                        Image(systemName: viewModel.showFavorites ? "star.fill" : "star")
                             .onTapGesture {
-                                showFavorites.toggle()
+                                viewModel.showFavorites.toggle()
                                 //filter favorites
                             }
                     }
                 }
-                .navigationTitle("Cities")
-                .toolbarBackground(Color.black, for: .automatic)
-                .toolbarRole(.navigationStack)
             }
         }
     }
-    
 }
 
 #Preview {
-    CityListView(viewModel: CityViewModel())
+    CityListView()
 }
