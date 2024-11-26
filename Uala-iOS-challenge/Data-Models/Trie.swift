@@ -2,7 +2,7 @@
 //  Trie.swift
 //  Uala-iOS-challenge
 //
-//  Created by Jeremias on 23/11/2024.
+//  Created by Jeremias Pellegrino on 23/11/2024.
 //
 
 import Combine
@@ -27,12 +27,6 @@ class ObservableTrie: ObservableObject {
         }
     }
     
-    func printChildren(_ node: TrieNode) {
-        for child in node.children.values {
-            printChildren(child)
-        }
-    }
-    
     // Insert a word into the Trie
     func insert(_ city: City) {
         var currentNode = root
@@ -54,7 +48,7 @@ class ObservableTrie: ObservableObject {
     func searchWithPrefix(_ prefix: String) -> [City] {
         var wordMatchingNode = root
 
-        for char in prefix {
+        for char in prefix.lowercased() {
             guard let nextNode = wordMatchingNode.children[char] else {
                 //no next node means no available matches
                 return []
@@ -77,11 +71,5 @@ class ObservableTrie: ObservableObject {
         }
         
         return cities
-    }
-    
-    func paginate<T>(array: [T], itemsPerPage: Int) -> [[T]] {
-        return stride(from: 0, to: array.count, by: itemsPerPage).map {
-            Array(array[$0..<min($0 + itemsPerPage, array.count)])
-        }
     }
 }
