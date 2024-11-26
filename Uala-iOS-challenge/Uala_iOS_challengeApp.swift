@@ -2,7 +2,7 @@
 //  Uala_iOS_challengeApp.swift
 //  Uala-iOS-challenge
 //
-//  Created by Jeremias on 22/11/2024.
+//  Created by Jeremias Pellegrino on 22/11/2024.
 //
 
 import SwiftUI
@@ -11,7 +11,8 @@ import SwiftUI
 struct Uala_iOS_challengeApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            CitiesView()
+                .modifier(FontModifier())
         }
     }
 }
